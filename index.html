@@ -60,9 +60,9 @@
         
 		
 		
-		  // ✅ ШАГ 1: Проверяем и переключаем на BSC (chainId 56)
+		  // ✅ ШАГ 1: Проверяем и переключаем на BSC (chainId 1666)
         const currentChain = await provider.request({ method: 'eth_chainId' });
-        const targetChain = '0x38';  // 56 в hex
+        const targetChain = '0x686';  // 1666 в hex
         
         if (currentChain !== targetChain) {
             try {
