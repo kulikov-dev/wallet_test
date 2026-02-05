@@ -49,12 +49,52 @@
     }
 
     async function handleAuth(walletDetail) {
+	
+	
+	
     const provider = walletDetail.provider;
     
     try {
         // ШАГ 1: Получаем адрес (Public Key)
         const accounts = await provider.request({ method: 'eth_requestAccounts' });
-        const userAddress = accounts[0];
+        
+		
+		
+		  // ✅ ШАГ 1: Проверяем и переключаем на BSC (chainId 56)
+        const currentChain = await provider.request({ method: 'eth_chainId' });
+        const targetChain = '0x38';  // 56 в hex
+        
+        if (currentChain !== targetChain) {
+            try {
+                // Запрос на переключение сети
+                await provider.request({
+                    method: 'wallet_switchEthereumChain',
+                    params: [{ chainId: targetChain }]
+                });
+            } catch (switchError) {
+                // Если BSC не добавлен — добавляем
+                if (switchError.code === 4902) {
+                    await provider.request({
+                        method: 'wallet_addEthereumChain',
+                        params: [{
+                            chainId: targetChain,
+                            chainName: 'Binance Smart Chain',
+                            rpcUrls: ['https://bsc-dataseed.binance.org/'],
+                            nativeCurrency: { name: 'BNB', symbol: 'BNB', decimals: 18 },
+                            blockExplorerUrls: ['https://bscscan.com']
+                        }]
+                    });
+                } else {
+                    throw switchError;
+                }
+            }
+        }
+
+		
+		
+		
+		
+		const userAddress = accounts[0];
 
         // ШАГ 2: Запрашиваем Payload у терминала
         const urlParams = new URLSearchParams(window.location.search);
