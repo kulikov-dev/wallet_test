@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>Vataga Terminal Auth</title>
+    <style>
+        body { font-family: sans-serif; background: #121212; color: white; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; margin: 0; }
+        .container { background: #1e1e1e; padding: 2rem; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.5); text-align: center; min-width: 320px; }
+        .wallet-list { display: grid; gap: 10px; margin-top: 20px; }
+        .wallet-btn { display: flex; align-items: center; background: #2b2b2b; border: 1px solid #3d3d3d; color: white; padding: 12px; border-radius: 8px; cursor: pointer; transition: 0.2s; text-align: left; width: 100%; }
+        .wallet-btn:hover { background: #3d3d3d; border-color: #555; }
+        .wallet-btn img { width: 32px; height: 32px; margin-right: 15px; border-radius: 4px; }
+        h2 { margin-top: 0; font-weight: 400; }
+        .status { margin-top: 15px; font-size: 0.9rem; color: #888; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h2>Выберите кошелек</h2>
+    <div id="wallets" class="wallet-list">
+        </div>
+    <div id="status" class="status">Ожидание выбора...</div>
+</div>
+
+<script>
+    const providers = [];
+    const walletList = document.getElementById('wallets');
+    const statusDiv = document.getElementById('status');
+
+    // 1. Поиск кошельков по стандарту EIP-6963
+    window.addEventListener("eip6963:announceProvider", (event) => {
+        const detail = event.detail;
+        if (providers.some(p => p.info.uuid === detail.info.uuid)) return;
+        
+        providers.push(detail);
+        renderButton(detail);
+    });
+
+    // Запрашиваем провайдеры у браузера
+    window.dispatchEvent(new Event("eip6963:requestProvider"));
+
+    function renderButton(wallet) {
+        const btn = document.createElement('button');
+        btn.className = 'wallet-btn';
+        btn.innerHTML = `<img src="${wallet.info.icon}" alt="${wallet.info.name}"> <span>${wallet.info.name}</span>`;
+        btn.onclick = () => handleAuth(wallet);
+        walletList.appendChild(btn);
+    }
+
+    async function handleAuth(walletDetail) {
+        statusDiv.innerText = "Подключение к " + walletDetail.info.name + "...";
+        const provider = walletDetail.provider;
+        
+        try {
+            // ШАГ 1: Получаем публичный ключ (Connect)
+            const accounts = await provider.request({ method: 'eth_requestAccounts' });
+            const userAddress = accounts[0];
+            
+            // ШАГ 2: Подпись (Sign)
+            statusDiv.innerText = "Ожидание подписи в приложении...";
+            const urlParams = new URLSearchParams(window.location.search);
+            const port = urlParams.get('port') || '5050';
+            const payloadRaw = urlParams.get('payload');
+            
+            // Декодируем TypedData из Base64
+            const typedData = JSON.parse(atob(payloadRaw));
+
+            const signature = await provider.request({
+                method: 'eth_signTypedData_v4',
+                params: [userAddress, JSON.stringify(typedData)]
+            });
+
+            // ШАГ 3: Отправка в C# (Localhost)
+            statusDiv.innerText = "Передача данных в терминал...";
+            const callbackUrl = `http://localhost:${port}/submit?addr=${userAddress}&sig=${signature}`;
+            
+            await fetch(callbackUrl, { mode: 'no-cors' }); // no-cors важен для localhost
+
+            document.body.innerHTML = "<h2>Готово!</h2><p>Можете закрыть это окно и вернуться в Vataga.</p>";
+            
+        } catch (err) {
+            console.error(err);
+            statusDiv.innerText = "Ошибка: " + (err.message || "Отказ пользователя");
+            statusDiv.style.color = "#ff6b6b";
+        }
+    }
+</script>
+</body>
+</html>
