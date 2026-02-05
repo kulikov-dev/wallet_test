@@ -49,42 +49,35 @@
     }
 
     async function handleAuth(walletDetail) {
-        statusDiv.innerText = "Подключение к " + walletDetail.info.name + "...";
-        const provider = walletDetail.provider;
+    const provider = walletDetail.provider;
+    
+    try {
+        // ШАГ 1: Получаем адрес (Public Key)
+        const accounts = await provider.request({ method: 'eth_requestAccounts' });
+        const userAddress = accounts[0];
+
+        // ШАГ 2: Запрашиваем Payload у терминала
+        const urlParams = new URLSearchParams(window.location.search);
+        const port = urlParams.get('port') || '5050';
         
-        try {
-            // ШАГ 1: Получаем публичный ключ (Connect)
-            const accounts = await provider.request({ method: 'eth_requestAccounts' });
-            const userAddress = accounts[0];
-            
-            // ШАГ 2: Подпись (Sign)
-            statusDiv.innerText = "Ожидание подписи в приложении...";
-            const urlParams = new URLSearchParams(window.location.search);
-            const port = urlParams.get('port') || '5050';
-            const payloadRaw = urlParams.get('payload');
-            
-            // Декодируем TypedData из Base64
-            const typedData = JSON.parse(atob(payloadRaw));
+        // Спрашиваем у C#: "Вот адрес юзера, что ему подписать?"
+        const response = await fetch(`http://localhost:${port}/getPayload?addr=${userAddress}`);
+        const typedData = await response.json(); 
 
-            const signature = await provider.request({
-                method: 'eth_signTypedData_v4',
-                params: [userAddress, JSON.stringify(typedData)]
-            });
+        // ШАГ 3: Подпись
+        const signature = await provider.request({
+            method: 'eth_signTypedData_v4',
+            params: [userAddress, JSON.stringify(typedData)]
+        });
 
-            // ШАГ 3: Отправка в C# (Localhost)
-            statusDiv.innerText = "Передача данных в терминал...";
-            const callbackUrl = `http://localhost:${port}/submit?addr=${userAddress}&sig=${signature}`;
-            
-            await fetch(callbackUrl, { mode: 'no-cors' }); // no-cors важен для localhost
-
-            document.body.innerHTML = "<h2>Готово!</h2><p>Можете закрыть это окно и вернуться в Vataga.</p>";
-            
-        } catch (err) {
-            console.error(err);
-            statusDiv.innerText = "Ошибка: " + (err.message || "Отказ пользователя");
-            statusDiv.style.color = "#ff6b6b";
-        }
+        // ШАГ 4: Финальная отправка подписи в C#
+        await fetch(`http://localhost:${port}/submit?addr=${userAddress}&sig=${signature}`, { mode: 'no-cors' });
+        
+        document.body.innerHTML = "<h2>Успешно!</h2>";
+    } catch (err) {
+        alert("Ошибка: " + err.message);
     }
+}
 </script>
 </body>
 </html>
