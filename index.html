@@ -67,7 +67,7 @@
         // ШАГ 3: Подпись
         const signature = await provider.request({
             method: 'eth_signTypedData_v4',
-            params: [userAddress, JSON.stringify(typedData)]
+            params: [userAddress, typedData]
         });
 
         // ШАГ 4: Финальная отправка подписи в C#
