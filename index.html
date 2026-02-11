@@ -101,7 +101,7 @@
         const port = urlParams.get('port') || '5050';
         
         // Спрашиваем у C#: "Вот адрес юзера, что ему подписать?"
-        const response = await fetch(`http://localhost:${port}/getPayload?addr=${userAddress}`);
+        const response = await fetch(`http://localhost:${port}/api/wallet/obtain?addr=${userAddress}`);
         const typedData = await response.json(); 
 
         // ШАГ 3: Подпись
@@ -111,7 +111,7 @@
         });
 
         // ШАГ 4: Финальная отправка подписи в C#
-        await fetch(`http://localhost:${port}/submit?addr=${userAddress}&sig=${signature}`, { mode: 'no-cors' });
+        await fetch(`http://localhost:${port}/api/wallet/approve?addr=${userAddress}&sig=${signature}`, { mode: 'no-cors' });
         
         document.body.innerHTML = "<h2>Успешно!</h2>";
     } catch (err) {
