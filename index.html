@@ -35,7 +35,10 @@
 		const state = urlParams.get('state');
 
 		if (port && state) {
-			navigator.sendBeacon(`http://localhost:${port}/api/wallet/cancel?state=${state}`);
+			fetch(`http://localhost:${port}/api/wallet/cancel?state=${state}`, { 
+				method: 'GET', 
+				keepalive: true 
+        });
 		}
 	});
 
