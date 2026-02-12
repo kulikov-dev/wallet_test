@@ -28,6 +28,17 @@
     const walletList = document.getElementById('wallets');
     const statusDiv = document.getElementById('status');
 
+	// Event on closing
+	window.addEventListener('beforeunload', function (e) {
+		const urlParams = new URLSearchParams(window.location.search);
+		const port = urlParams.get('port');
+		const state = urlParams.get('state');
+
+		if (port && state) {
+			navigator.sendBeacon(`http://localhost:${port}/api/wallet/cancel?state=${state}`);
+		}
+	});
+
     // 1. Поиск кошельков по стандарту EIP-6963
     window.addEventListener("eip6963:announceProvider", (event) => {
         const detail = event.detail;
