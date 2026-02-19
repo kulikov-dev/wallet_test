@@ -4,135 +4,219 @@
     <meta charset="UTF-8">
     <title>Vataga Terminal Auth</title>
     <style>
-        body { font-family: sans-serif; background: #121212; color: white; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; margin: 0; }
-        .container { background: #1e1e1e; padding: 2rem; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.5); text-align: center; min-width: 320px; }
-        .wallet-list { display: grid; gap: 10px; margin-top: 20px; }
-        .wallet-btn { display: flex; align-items: center; background: #2b2b2b; border: 1px solid #3d3d3d; color: white; padding: 12px; border-radius: 8px; cursor: pointer; transition: 0.2s; text-align: left; width: 100%; }
-        .wallet-btn:hover { background: #3d3d3d; border-color: #555; }
-        .wallet-btn img { width: 32px; height: 32px; margin-right: 15px; border-radius: 4px; }
-        h2 { margin-top: 0; font-weight: 400; }
-        .status { margin-top: 15px; font-size: 0.9rem; color: #888; }
+        body {
+            font-family: sans-serif;
+            background: #121212;
+            color: white;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            margin: 0;
+        }
+
+        .container {
+            background: #1e1e1e;
+            padding: 2rem;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+            text-align: center;
+            min-width: 320px;
+        }
+
+        .wallet-list {
+            display: grid;
+            gap: 10px;
+            margin-top: 20px;
+        }
+
+        .wallet-btn {
+            display: flex;
+            align-items: center;
+            background: #2b2b2b;
+            border: 1px solid #3d3d3d;
+            color: white;
+            padding: 12px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: 0.2s;
+            text-align: left;
+            width: 100%;
+        }
+
+            .wallet-btn:hover {
+                background: #3d3d3d;
+                border-color: #555;
+            }
+
+            .wallet-btn img {
+                width: 32px;
+                height: 32px;
+                margin-right: 15px;
+                border-radius: 4px;
+            }
+
+        h2 {
+            margin-top: 0;
+            font-weight: 400;
+        }
+
+        .status {
+            margin-top: 15px;
+            font-size: 0.9rem;
+            color: #888;
+        }
     </style>
 </head>
 <body>
 
-<div class="container">
-    <h2>Выберите кошелек</h2>
-    <div id="wallets" class="wallet-list">
-        </div>
-    <div id="status" class="status">Ожидание выбора...</div>
-</div>
+    <div class="container">
+        <h2 id="ui-title">...</h2>
+        <div id="wallets" class="wallet-list"></div>
+        <div id="status" class="status">...</div>
+    </div>
 
-<script>
-    const providers = [];
-    const walletList = document.getElementById('wallets');
-    const statusDiv = document.getElementById('status');
+    <script>
 
-	// Event on closing
-	window.addEventListener('beforeunload', function (e) {
-		const urlParams = new URLSearchParams(window.location.search);
-		const port = urlParams.get('port');
-		const state = urlParams.get('state');
-
-		if (port && state) {
-			fetch(`http://localhost:${port}/api/wallet/cancel?state=${state}`, { 
-				method: 'GET', 
-				keepalive: true 
-        });
-		}
-	});
-
-    // 1. Поиск кошельков по стандарту EIP-6963
-    window.addEventListener("eip6963:announceProvider", (event) => {
-        const detail = event.detail;
-        if (providers.some(p => p.info.uuid === detail.info.uuid)) return;
-        
-        providers.push(detail);
-        renderButton(detail);
-    });
-
-    // Запрашиваем провайдеры у браузера
-    window.dispatchEvent(new Event("eip6963:requestProvider"));
-
-    function renderButton(wallet) {
-        const btn = document.createElement('button');
-        btn.className = 'wallet-btn';
-        btn.innerHTML = `<img src="${wallet.info.icon}" alt="${wallet.info.name}"> <span>${wallet.info.name}</span>`;
-        btn.onclick = () => handleAuth(wallet);
-        walletList.appendChild(btn);
-    }
-
-    async function handleAuth(walletDetail) {
-	
-	
-	
-    const provider = walletDetail.provider;
-    
-    try {
-        // ШАГ 1: Получаем адрес (Public Key)
-        const accounts = await provider.request({ method: 'eth_requestAccounts' });
-        
-		
-		
-		  // ✅ ШАГ 1: Проверяем и переключаем на BSC (chainId 56)
-        const currentChain = await provider.request({ method: 'eth_chainId' });
-        const targetChain = '0x38';  // 56 в hex
-        
-        if (currentChain !== targetChain) {
-            try {
-                // Запрос на переключение сети
-                await provider.request({
-                    method: 'wallet_switchEthereumChain',
-                    params: [{ chainId: targetChain }]
-                });
-            } catch (switchError) {
-                // Если BSC не добавлен — добавляем
-                if (switchError.code === 4902) {
-                    await provider.request({
-                        method: 'wallet_addEthereumChain',
-                        params: [{
-                            chainId: targetChain,
-                            chainName: 'Binance Smart Chain',
-                            rpcUrls: ['https://bsc-dataseed.binance.org/'],
-                            nativeCurrency: { name: 'BNB', symbol: 'BNB', decimals: 18 },
-                            blockExplorerUrls: ['https://bscscan.com']
-                        }]
-                    });
-                } else {
-                    throw switchError;
-                }
+        const i18n = {
+            ru: {
+                title: "Выберите кошелек",
+                statusWaiting: "Ожидание выбора...",
+                success: "Успешно!",
+                error: "Ошибка: ",
+                chainError: "Пожалуйста, переключите сеть в кошельке"
+            },
+            en: {
+                title: "Select Wallet",
+                statusWaiting: "Waiting for selection...",
+                success: "Success!",
+                error: "Error: ",
+                chainError: "Please switch the network in your wallet"
+            },
+            uk: {
+                title: "Оберіть гаманець",
+                statusWaiting: "Очікування вибору...",
+                success: "Успішно!",
+                error: "Помилка: ",
+                chainError: "Будь ласка, змініть мережу в гаманці"
+            },
+            es: {
+                title: "Seleccionar billetera",
+                statusWaiting: "Esperando selección...",
+                success: "¡Éxito!",
+                error: "Error: ",
+                chainError: "Por favor, cambie la red en su billetera"
             }
+        };
+
+        // Localization
+        const urlParams = new URLSearchParams(window.location.search);
+        let lang = urlParams.get('lang') || navigator.language.slice(0, 2);
+        if (!i18n[lang]) lang = 'en';
+
+        const texts = i18n[lang];
+
+        document.title = "Vataga Auth";
+        document.getElementById('ui-title').innerText = texts.title;
+        document.getElementById('status').innerText = texts.statusWaiting;
+
+        const providers = [];
+        const walletList = document.getElementById('wallets');
+        const statusDiv = document.getElementById('status');
+
+        // Event on closing
+        window.addEventListener('beforeunload', function (e) {
+            const urlParams = new URLSearchParams(window.location.search);
+            const port = urlParams.get('port');
+            const state = urlParams.get('state');
+
+            if (port && state) {
+                fetch(`http://localhost:${port}/api/wallet/cancel?state=${state}`, {
+                    method: 'GET',
+                    keepalive: true
+                });
+            }
+        });
+
+        // // Get wallet plugins EIP-6963
+        window.addEventListener("eip6963:announceProvider", (event) => {
+            const detail = event.detail;
+            if (providers.some(p => p.info.uuid === detail.info.uuid)) return;
+
+            providers.push(detail);
+            renderButton(detail);
+        });
+
+        window.dispatchEvent(new Event("eip6963:requestProvider"));
+
+        function renderButton(wallet) {
+            const btn = document.createElement('button');
+            btn.className = 'wallet-btn';
+            btn.innerHTML = `<img src="${wallet.info.icon}" alt="${wallet.info.name}"> <span>${wallet.info.name}</span>`;
+            btn.onclick = () => handleAuth(wallet);
+            walletList.appendChild(btn);
         }
 
-		
-		
-		
-		
-		const userAddress = accounts[0];
+        async function handleAuth(walletDetail) {
+            const provider = walletDetail.provider;
 
-        // ШАГ 2: Запрашиваем Payload у терминала
-        const urlParams = new URLSearchParams(window.location.search);
-        const port = urlParams.get('port') || '5050';
-		const state = urlParams.get('state');
-        
-        // Спрашиваем у C#: "Вот адрес юзера, что ему подписать?"
-        const response = await fetch(`http://localhost:${port}/api/wallet/obtain?addr=${userAddress}&state=${state}`);
-        const typedData = await response.json(); 
+            try {
+                // Step 1. Get public adddress
+                const accounts = await provider.request({ method: 'eth_requestAccounts' });
 
-        // ШАГ 3: Подпись
-        const signature = await provider.request({
-            method: 'eth_signTypedData_v4',
-            params: [userAddress, typedData]
-        });
+                // Step 2. Switch walllet to BSC (chainId 56)
+                const currentChain = await provider.request({ method: 'eth_chainId' });
+                const targetChain = '0x38';  // 56 в hex
 
-        // ШАГ 4: Финальная отправка подписи в C#
-        await fetch(`http://localhost:${port}/api/wallet/approve?addr=${userAddress}&state=${state}&sig=${signature}`, { mode: 'no-cors' });
-        
-        document.body.innerHTML = "<h2>Успешно!</h2>";
-    } catch (err) {
-        alert("Ошибка: " + err.message);
-    }
-}
-</script>
+                if (currentChain !== targetChain) {
+                    try {
+
+                        await provider.request({
+                            method: 'wallet_switchEthereumChain',
+                            params: [{ chainId: targetChain }]
+                        });
+                    } catch (switchError) {
+                        if (switchError.code === 4902) {
+                            await provider.request({
+                                method: 'wallet_addEthereumChain',
+                                params: [{
+                                    chainId: targetChain,
+                                    chainName: 'Binance Smart Chain',
+                                    rpcUrls: ['https://bsc-dataseed.binance.org/'],
+                                    nativeCurrency: { name: 'BNB', symbol: 'BNB', decimals: 18 },
+                                    blockExplorerUrls: ['https://bscscan.com']
+                                }]
+                            });
+                        } else {
+                            throw switchError;
+                        }
+                    }
+                }
+
+                const userAddress = accounts[0];
+
+                // Step 3. Get payload to auth agent/buildder from the app
+                const urlParams = new URLSearchParams(window.location.search);
+                const port = urlParams.get('port') || '5050';
+                const state = urlParams.get('state');
+
+                const response = await fetch(`http://localhost:${port}/api/wallet/obtain?addr=${userAddress}&state=${state}`);
+                const typedData = await response.json();
+
+                // Step 4. Get signature from wallet andd send to  the app
+                const signature = await provider.request({
+                    method: 'eth_signTypedData_v4',
+                    params: [userAddress, typedData]
+                });
+
+                await fetch(`http://localhost:${port}/api/wallet/approve?addr=${userAddress}&state=${state}&sig=${signature}`, { mode: 'no-cors' });
+
+                document.querySelector('.container').innerHTML = `<h2>${texts.success}</h2>`;
+            } catch (err) {
+                alert(texts.error + err.message);
+            }
+        }
+    </script>
 </body>
 </html>
