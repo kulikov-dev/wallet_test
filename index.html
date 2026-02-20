@@ -167,32 +167,36 @@
 
                 // Step 2. Switch walllet to BSC (chainId 56)
                 const currentChain = await provider.request({ method: 'eth_chainId' });
-                const targetChain = '0x38';  // 56 в hex
+const targetChain = '0xa4b1'; // Arbitrum One (42161)
 
-                if (currentChain !== targetChain) {
-                    try {
-
-                        await provider.request({
-                            method: 'wallet_switchEthereumChain',
-                            params: [{ chainId: targetChain }]
-                        });
-                    } catch (switchError) {
-                        if (switchError.code === 4902) {
-                            await provider.request({
-                                method: 'wallet_addEthereumChain',
-                                params: [{
-                                    chainId: targetChain,
-                                    chainName: 'Binance Smart Chain',
-                                    rpcUrls: ['https://bsc-dataseed.binance.org/'],
-                                    nativeCurrency: { name: 'BNB', symbol: 'BNB', decimals: 18 },
-                                    blockExplorerUrls: ['https://bscscan.com']
-                                }]
-                            });
-                        } else {
-                            throw switchError;
-                        }
-                    }
-                }
+if (currentChain !== targetChain) {
+    try {
+        await provider.request({
+            method: 'wallet_switchEthereumChain',
+            params: [{ chainId: targetChain }]
+        });
+    } catch (switchError) {
+        // Ошибка 4902 означает, что сеть ещё не добавлена в кошелёк
+        if (switchError.code === 4902) {
+            await provider.request({
+                method: 'wallet_addEthereumChain',
+                params: [{
+                    chainId: targetChain,
+                    chainName: 'Arbitrum One',
+                    rpcUrls: ['https://arb1.arbitrum.io/rpc'], // можно добавить запасные RPC
+                    nativeCurrency: {
+                        name: 'Ethereum',
+                        symbol: 'ETH',
+                        decimals: 18
+                    },
+                    blockExplorerUrls: ['https://arbiscan.io']
+                }]
+            });
+        } else {
+            throw switchError;
+        }
+    }
+}
 
                 const userAddress = accounts[0];
 
