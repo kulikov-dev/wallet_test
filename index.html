@@ -166,8 +166,8 @@
                 const accounts = await provider.request({ method: 'eth_requestAccounts' });
 
                 // Step 2. Switch walllet to BSC (chainId 56)
-                const currentChain = await provider.request({ method: 'eth_chainId' });
-const targetChain = '0xa4b1'; // Arbitrum One (42161)
+             const currentChain = await provider.request({ method: 'eth_chainId' });
+const targetChain = '0x66eee'; // Arbitrum Sepolia (421614)
 
 if (currentChain !== targetChain) {
     try {
@@ -182,14 +182,14 @@ if (currentChain !== targetChain) {
                 method: 'wallet_addEthereumChain',
                 params: [{
                     chainId: targetChain,
-                    chainName: 'Arbitrum One',
-                    rpcUrls: ['https://arb1.arbitrum.io/rpc'], // можно добавить запасные RPC
+                    chainName: 'Arbitrum Sepolia',
+                    rpcUrls: ['https://sepolia-rollup.arbitrum.io/rpc'], // Публичный RPC [citation:8]
                     nativeCurrency: {
                         name: 'Ethereum',
                         symbol: 'ETH',
                         decimals: 18
                     },
-                    blockExplorerUrls: ['https://arbiscan.io']
+                    blockExplorerUrls: ['https://sepolia.arbiscan.io'] // [citation:8]
                 }]
             });
         } else {
